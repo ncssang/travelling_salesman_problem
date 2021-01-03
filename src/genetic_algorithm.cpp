@@ -398,6 +398,7 @@ void select(const int& number_of_vertices,
         current_costs[i] = current_cost;
     }
 
+
     // std::sort(std::begin(current_costs), std::end(current_costs));
 
     for (int i = 0; i < current_population_size; ++i)
