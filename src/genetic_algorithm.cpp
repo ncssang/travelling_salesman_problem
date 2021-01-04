@@ -19,16 +19,22 @@ private:
     int width_;
     int step_size_;
     int border_;
+    std::vector<std::vector<int>> vertices_;
+    std::vector<std::vector<float>> cost_matrix_;
+    // std::vector<std::vector<int>> population_;
 
 public:
-    Genetic(int number_of_vertices = 0, int population_size = 0, int hybridization_size = 0, int mutation_size = 0, int number_of_generations = 0, int height = 0, int width = 0, int step_size = 0, int border = 0);
-    static Genetic generate_vertices(const std::string& file_name, const Genetic& genetic, std::vector<std::vector<int>>& vertices);
-    static Genetic compute_cost_matrix(const std::string& file_name, const Genetic& genetic, const std::vector<std::vector<int>>& vertices, std::vector<std::vector<float>>& cost_matrix);
-    static Genetic initialise(const Genetic& genetic, std::vector<std::vector<int>>& population);
-    static Genetic hybridise(const Genetic& genetic, const std::vector<int>& tour1, const std::vector<int>& tour2, std::vector<int>& tour1_, std::vector<int>& tour2_, const int& from, const int& to);
-    static Genetic mutate(const Genetic& genetic, const std::vector<int>& tour, std::vector<int>& tour_, const int& method, int& from, int& to);
-    static Genetic select(const Genetic& genetic, const std::vector<std::vector<float>>& cost_matrix, std::vector<std::vector<int>>& population, std::vector<float>& current_costs);
-    static Genetic genetic(const Genetic& genetic, const std::vector<std::vector<float>>& cost_matrix, std::vector<int>& genetic_tour, float& genetic_algorithm_cost);
+    Genetic(int number_of_vertices = 0, int population_size = 0, int hybridization_size = 0,
+            int mutation_size = 0, int number_of_generations = 0, int height = 0, int width = 0, int step_size = 0, int border = 0);
+    void generate_vertices();
+    std::vector<std::vector<int>> get_vertices();
+    void compute_cost_matrix();
+    void initialise(std::vector<std::vector<int>>& population);
+    // void set_population(std::vector<std::vector<int>> population);
+    void hybridise(const std::vector<int>& tour1, const std::vector<int>& tour2, std::vector<int>& tour1_, std::vector<int>& tour2_, const int& from, const int& to);
+    void mutate(const std::vector<int>& tour, std::vector<int>& tour_, const int& method, int& from, int& to);
+    void select(std::vector<std::vector<int>>& population, std::vector<float>& current_costs);
+    void genetic(std::vector<int>& genetic_tour, float& genetic_algorithm_cost);
 };
 
 int main()
@@ -41,35 +47,20 @@ int main()
     int population_size = 500;
     int hybridization_size = 150;
     int mutation_size = 20;
-    int number_of_generations = 1000;
+    int number_of_generations = 20000;
     Genetic genetic(number_of_vertices, population_size, hybridization_size, mutation_size, number_of_generations, height, width, step_size, border);
+    // number_of_vertices = 100;
 
+    genetic.generate_vertices();
     std::vector<std::vector<int>> vertices;
-    Genetic::generate_vertices("cost_matrix.data", genetic, vertices);
+    vertices = genetic.get_vertices();
 
-    std::vector<std::vector<float>> cost_matrix;
-    Genetic::compute_cost_matrix("cost_matrix.data", genetic, vertices, cost_matrix);
-
-
-    // std::vector<cv::Point2f> points;
-    // for (int i = 0; i < number_of_vertices; ++i)
-    // {
-    //     points.push_back(cv::Point(rand() % ((width - border * 3) / step_size) * step_size + border, rand() % ((height - border * 3) / step_size) * step_size + border));
-    // }
-    // std::vector<std::vector<int>> vertices;
-    // generate_vertices("vertices.data", height, width, step_size, border,
-    //                   number_of_vertices, vertices);
-
-    // std::vector<std::vector<float>> cost_matrix;
-    // compute_cost_matrix("cost_matrix.data", number_of_vertices, vertices, cost_matrix);
+    genetic.compute_cost_matrix();
 
     std::vector<int> genetic_tour;
     float genetic_algorithm_cost;
-    Genetic::genetic(genetic, cost_matrix, genetic_tour, genetic_algorithm_cost);
-
-    // genetic(number_of_vertices, population_size, hybridization_size, mutation_size,
-    //         number_of_generations, cost_matrix, genetic_tour, genetic_algorithm_cost);
-
+    genetic.genetic(genetic_tour, genetic_algorithm_cost);
+    
     cv::Mat genetic_map(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
     for (int i = 0; i < number_of_vertices; ++i)
     {
@@ -99,114 +90,102 @@ Genetic::Genetic(int number_of_vertices, int population_size, int hybridization_
 {
 }
 
-Genetic Genetic::genetic(const Genetic& genetic, const std::vector<std::vector<float>>& cost_matrix, std::vector<int>& genetic_tour, float& genetic_algorithm_cost)
+void Genetic::genetic(std::vector<int>& genetic_tour, float& genetic_algorithm_cost)
 {
-    std::vector<std::vector<int>> population = std::vector<std::vector<int>>(genetic.population_size_ + genetic.hybridization_size_ * 2 + genetic.mutation_size_);
-    initialise(genetic, population);
-    for (int generation = 0; generation < genetic.number_of_vertices_; ++generation)
+    std::vector<std::vector<int>> population = std::vector<std::vector<int>>(population_size_ + hybridization_size_ * 2 + mutation_size_);
+    initialise(population);
+    for (int generation = 0; generation < number_of_generations_; ++generation)
     {
-        for (int i = 0; i < genetic.hybridization_size_; ++i)
+        for (int i = 0; i < hybridization_size_; ++i)
         {
-            int first_individual_index = rand() % genetic.population_size_;
-            int second_individual_index = rand() % genetic.population_size_;
-            int from = rand() % genetic.number_of_vertices_;
-            int to = rand() % genetic.number_of_vertices_;
+            int first_individual_index = rand() % population_size_;
+            int second_individual_index = rand() % population_size_;
+            int from = rand() % number_of_vertices_;
+            int to = rand() % number_of_vertices_;
             std::vector<int> tour1_, tour2_;
-            hybridise(genetic.number_of_vertices_, population[first_individual_index],
+            hybridise(population[first_individual_index],
                       population[second_individual_index],
                       tour1_,
                       tour2_, from, to);
-            population[genetic.population_size_ + 2 * i] = tour1_;
-            population[genetic.population_size_ + 2 * i + 1] = tour2_;
+            population[population_size_ + 2 * i] = tour1_;
+            population[population_size_ + 2 * i + 1] = tour2_;
         }
 
-        for (int i = 0; i < genetic.mutation_size_; ++i)
+        for (int i = 0; i < mutation_size_; ++i)
         {
-            int individual_index = rand() % genetic.mutation_size_;
+            int individual_index = rand() % population_size_;
             int method = rand() % 3;
-            int from = rand() % genetic.number_of_vertices_;
-            int to = rand() % genetic.number_of_vertices_;
+            int from = rand() % number_of_vertices_;
+            int to = rand() % number_of_vertices_;
 
             std::vector<int> tour_;
-            mutate(genetic.number_of_vertices_, population[individual_index],
+            mutate(population[individual_index],
                    tour_, method,
                    from, to);
-            population[genetic.population_size_ + 2 * genetic.hybridization_size_ + i] = tour_;
+            population[population_size_ + 2 * hybridization_size_ + i] = tour_;
         }
 
         std::vector<float> current_costs;
-        select(genetic, cost_matrix, population, current_costs);
+        select(population, current_costs);
         genetic_algorithm_cost = current_costs[0];
     }
 
-    for (int i = 0; i < genetic.number_of_vertices_; ++i)
+    for (int i = 0; i < number_of_vertices_; ++i)
     {
         genetic_tour.push_back(population[0][i]);
     }
 }
 
-Genetic Genetic::generate_vertices(const std::string& file_name, const Genetic& genetic, std::vector<std::vector<int>>& vertices)
+void Genetic::generate_vertices()
 {
-    vertices = std::vector<std::vector<int>>(genetic.number_of_vertices_);
-    std::ofstream fs;
-    fs.open(file_name.c_str());
-    fs << genetic.number_of_vertices_ << std::endl;
-    for (int i = 0; i < genetic.number_of_vertices_; ++i)
+    vertices_ = std::vector<std::vector<int>>(number_of_vertices_);
+ 
+    for (int i = 0; i < number_of_vertices_; ++i)
     {
-        vertices[i] = std::vector<int>(2);
-        int x = rand() % ((genetic.width_ - genetic.border_ * 3) / genetic.step_size_) * genetic.step_size_ + genetic.border_;
-        int y = rand() % ((genetic.height_ - genetic.border_ * 3) / genetic.step_size_) * genetic.step_size_ + genetic.border_;
-        vertices[i][0] = x;
-        vertices[i][1] = y;
-        fs << vertices[i][0] << " " << vertices[i][1] << std::endl;
+        vertices_[i] = std::vector<int>(2);
+        int x = rand() % ((width_ - border_ * 3) / step_size_) * step_size_ + border_;
+        int y = rand() % ((height_ - border_ * 3) / step_size_) * step_size_ + border_;
+        vertices_[i][0] = x;
+        vertices_[i][1] = y;
     }
-    fs.close();
 }
 
-Genetic Genetic::compute_cost_matrix(const std::string& file_name, const Genetic& genetic, const std::vector<std::vector<int>>& vertices, std::vector<std::vector<float>>& cost_matrix)
+std::vector<std::vector<int>> Genetic::get_vertices()
 {
-    cost_matrix = std::vector<std::vector<float>>(genetic.number_of_vertices_);
-    for (int i = 0; i < genetic.number_of_vertices_; ++i)
+    return vertices_;
+}
+
+void Genetic::compute_cost_matrix()
+{
+    cost_matrix_ = std::vector<std::vector<float>>(number_of_vertices_);
+    for (int i = 0; i < number_of_vertices_; ++i)
     {
-        cost_matrix[i] = std::vector<float>(genetic.number_of_vertices_);
-        for (int j = 0; j < genetic.number_of_vertices_; ++j)
+        cost_matrix_[i] = std::vector<float>(number_of_vertices_);
+        for (int j = 0; j < number_of_vertices_; ++j)
         {
             if (i == j)
             {
-                cost_matrix[i][j] = FLT_MAX;
+                cost_matrix_[i][j] = FLT_MAX;
             }
             else
             {
-                int dx = vertices[i][0] - vertices[j][0];
-                int dy = vertices[i][1] - vertices[j][1];
-                cost_matrix[i][j] = sqrt(dx * dx + dy * dy);
+                int dx = vertices_[i][0] - vertices_[j][0];
+                int dy = vertices_[i][1] - vertices_[j][1];
+                cost_matrix_[i][j] = sqrt(dx * dx + dy * dy);
             }
         }
     }
-
-    std::ofstream fs;
-    fs.open(file_name.c_str());
-    fs << genetic.number_of_vertices_ << std::endl;
-    for (int i = 0; i < genetic.number_of_vertices_; ++i)
-    {
-        for (int j = 0; j < genetic.number_of_vertices_; ++j)
-        {
-            fs << cost_matrix[i][j] << " ";
-        }
-        fs << std::endl;
-    }
-    fs.close();
 }
 
-Genetic Genetic::initialise(const Genetic& genetic, std::vector<std::vector<int>>& population)
+void Genetic::initialise(std::vector<std::vector<int>>& population)
 {
-    for (int i = 0; i < genetic.population_size_ + genetic.hybridization_size_ * 2 + genetic.mutation_size_; ++i)
+    for (int i = 0; i < population_size_ + hybridization_size_ * 2 + mutation_size_; ++i)
     {
-        population[i] = std::vector<int>(genetic.number_of_vertices_);
-        std::vector<bool> has_been_visited = std::vector<bool>(genetic.number_of_vertices_, false);
-        for (int j = 0; j < genetic.number_of_vertices_; ++j)
+        population[i] = std::vector<int>(number_of_vertices_);
+        std::vector<bool> has_been_visited = std::vector<bool>(number_of_vertices_, false);
+        for (int j = 0; j < number_of_vertices_; ++j)
         {
-            int shifting_vertex = rand() % (genetic.number_of_vertices_ - j);
+            int shifting_vertex = rand() % (number_of_vertices_ - j);
 
             int current_vertex = 0;
             while (has_been_visited[current_vertex] != false)
@@ -229,13 +208,13 @@ Genetic Genetic::initialise(const Genetic& genetic, std::vector<std::vector<int>
     }
 }
 
-Genetic Genetic::hybridise(const Genetic& genetic, const std::vector<int>& tour1, const std::vector<int>& tour2, std::vector<int>& tour1_, std::vector<int>& tour2_, const int& from, const int& to)
+void Genetic::hybridise(const std::vector<int>& tour1, const std::vector<int>& tour2, std::vector<int>& tour1_, std::vector<int>& tour2_, const int& from, const int& to)
 {
-    tour1_ = std::vector<int>(genetic.number_of_vertices_);
-    tour2_ = std::vector<int>(genetic.number_of_vertices_);
-    std::vector<int> has_been_visited = std::vector<int>(genetic.number_of_vertices_, false);
-    std::vector<int> check_tour_1 = std::vector<int>(genetic.number_of_vertices_, 0);
-    std::vector<int> check_tour_2 = std::vector<int>(genetic.number_of_vertices_, 0);
+    tour1_ = std::vector<int>(number_of_vertices_);
+    tour2_ = std::vector<int>(number_of_vertices_);
+    std::vector<int> has_been_visited = std::vector<int>(number_of_vertices_, false);
+    std::vector<int> check_tour_1 = std::vector<int>(number_of_vertices_, 0);
+    std::vector<int> check_tour_2 = std::vector<int>(number_of_vertices_, 0);
 
     if (from < to)
     {
@@ -252,13 +231,13 @@ Genetic Genetic::hybridise(const Genetic& genetic, const std::vector<int>& tour1
         }
     }
 
-    for (int i = 0; i < genetic.number_of_vertices_; ++i)
+    for (int i = 0; i < number_of_vertices_; ++i)
     {
         if (has_been_visited[i] == true)
         {
             tour1_[i] = tour2[i];
             tour2_[i] = tour1[i];
-            for (int j = 0; j < genetic.number_of_vertices_; ++j)
+            for (int j = 0; j < number_of_vertices_; ++j)
             {
                 if (tour1[j] == tour2[i])
                 {
@@ -274,7 +253,7 @@ Genetic Genetic::hybridise(const Genetic& genetic, const std::vector<int>& tour1
 
     int current_index_1 = 0;
     int current_index_2 = 0;
-    for (int i = 0; i < genetic.number_of_vertices_; ++i)
+    for (int i = 0; i < number_of_vertices_; ++i)
     {
         while (check_tour_1[current_index_1] == 1)
         {
@@ -294,9 +273,9 @@ Genetic Genetic::hybridise(const Genetic& genetic, const std::vector<int>& tour1
     }
 }
 
-Genetic Genetic::mutate(const Genetic& genetic, const std::vector<int>& tour, std::vector<int>& tour_, const int& method, int& from, int& to)
+void Genetic::mutate(const std::vector<int>& tour, std::vector<int>& tour_, const int& method, int& from, int& to)
 {
-    tour_ = std::vector<int>(genetic.number_of_vertices_);
+    tour_ = std::vector<int>(number_of_vertices_);
 
     if (from > to)
     {
@@ -307,7 +286,7 @@ Genetic Genetic::mutate(const Genetic& genetic, const std::vector<int>& tour, st
 
     if (method == 0)
     {
-        for (int i = 0; i < genetic.number_of_vertices_; ++i)
+        for (int i = 0; i < number_of_vertices_; ++i)
         {
             tour_[i] = tour[i];
         }
@@ -324,7 +303,7 @@ Genetic Genetic::mutate(const Genetic& genetic, const std::vector<int>& tour, st
         {
             tour_[i] = tour[from + to - i];
         }
-        for (int i = to + 1; i < genetic.number_of_vertices_; ++i)
+        for (int i = to + 1; i < number_of_vertices_; ++i)
         {
             tour_[i] = tour[i];
         }
@@ -335,27 +314,27 @@ Genetic Genetic::mutate(const Genetic& genetic, const std::vector<int>& tour, st
         {
             tour_[i] = tour[i];
         }
-        for (int i = from; i < from + (genetic.number_of_vertices_ - (to + 1)); ++i)
+        for (int i = from; i < from + (number_of_vertices_ - (to + 1)); ++i)
         {
             tour_[i] = tour[i + to - from + 1];
         }
-        for (int i = from + (genetic.number_of_vertices_ - (to + 1)); i < genetic.number_of_vertices_; ++i)
+        for (int i = from + (number_of_vertices_ - (to + 1)); i < number_of_vertices_; ++i)
         {
-            tour_[i] = tour[i - (genetic.number_of_vertices_ - (to + 1))];
+            tour_[i] = tour[i - (number_of_vertices_ - (to + 1))];
         }
     }
 }
 
-Genetic Genetic::select(const Genetic& genetic, const std::vector<std::vector<float>>& cost_matrix, std::vector<std::vector<int>>& population, std::vector<float>& current_costs)
+void Genetic::select(std::vector<std::vector<int>>& population, std::vector<float>& current_costs)
 {
-    int current_population_size = genetic.population_size_ + 2 * genetic.hybridization_size_ + genetic.mutation_size_;
+    int current_population_size = population_size_ + 2 * hybridization_size_ + mutation_size_;
     current_costs = std::vector<float>(current_population_size);
     for (int i = 0; i < current_population_size; ++i)
     {
         float current_cost = 0;
-        for (int j = 0; j < genetic.number_of_vertices_; ++j)
+        for (int j = 0; j < number_of_vertices_; ++j)
         {
-            current_cost += cost_matrix[population[i][j]][population[i][(j + 1) % genetic.number_of_vertices_]];
+            current_cost += cost_matrix_[population[i][j]][population[i][(j + 1) % number_of_vertices_]];
         }
         current_costs[i] = current_cost;
     }
@@ -372,7 +351,7 @@ Genetic Genetic::select(const Genetic& genetic, const std::vector<std::vector<fl
                 float temporary_cost = current_costs[i];
                 current_costs[i] = current_costs[j];
                 current_costs[j] = temporary_cost;
-                for (int index = 0; index < genetic.number_of_vertices_; ++index)
+                for (int index = 0; index < number_of_vertices_; ++index)
                 {
                     int tmp = population[i][index];
                     population[i][index] = population[j][index];
