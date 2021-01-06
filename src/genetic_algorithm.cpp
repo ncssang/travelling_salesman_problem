@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -24,9 +25,9 @@ private:
     // std::vector<std::vector<int>> population_;
 
 public:
-    Genetic(int number_of_vertices = 0, int population_size = 0, int hybridization_size = 0,
-            int mutation_size = 0, int number_of_generations = 0, int height = 0, int width = 0, int step_size = 0, int border = 0);
+    Genetic(int number_of_vertices = 0, int population_size = 0, int hybridization_size = 0, int mutation_size = 0, int number_of_generations = 0, int height = 0, int width = 0, int step_size = 0, int border = 0);
     void generate_vertices();
+    void read_vertices(const std::string& file_name);
     std::vector<std::vector<int>> get_vertices();
     void compute_cost_matrix();
     void initialise(std::vector<std::vector<int>>& population);
@@ -43,15 +44,16 @@ int main()
     int width = 1200;
     int border = 25;
     int step_size = 10;
-    int number_of_vertices = 100;
+    int number_of_vertices = 10;
     int population_size = 500;
     int hybridization_size = 150;
     int mutation_size = 20;
-    int number_of_generations = 20000;
+    int number_of_generations = 2000;
     Genetic genetic(number_of_vertices, population_size, hybridization_size, mutation_size, number_of_generations, height, width, step_size, border);
     // number_of_vertices = 100;
 
-    genetic.generate_vertices();
+    // genetic.generate_vertices();
+    genetic.read_vertices("vertices.txt");
     std::vector<std::vector<int>> vertices;
     vertices = genetic.get_vertices();
 
@@ -60,7 +62,7 @@ int main()
     std::vector<int> genetic_tour;
     float genetic_algorithm_cost;
     genetic.genetic(genetic_tour, genetic_algorithm_cost);
-    
+
     cv::Mat genetic_map(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
     for (int i = 0; i < number_of_vertices; ++i)
     {
@@ -88,6 +90,7 @@ Genetic::Genetic(int number_of_vertices, int population_size, int hybridization_
     : number_of_vertices_(number_of_vertices), population_size_(population_size), hybridization_size_(hybridization_size), mutation_size_(mutation_size), number_of_generations_(number_of_generations),
       height_(height), width_(width), step_size_(step_size), border_(border)
 {
+    vertices_ = std::vector<std::vector<int>>(number_of_vertices_, std::vector<int>(2));
 }
 
 void Genetic::genetic(std::vector<int>& genetic_tour, float& genetic_algorithm_cost)
@@ -138,16 +141,44 @@ void Genetic::genetic(std::vector<int>& genetic_tour, float& genetic_algorithm_c
 
 void Genetic::generate_vertices()
 {
-    vertices_ = std::vector<std::vector<int>>(number_of_vertices_);
- 
     for (int i = 0; i < number_of_vertices_; ++i)
     {
-        vertices_[i] = std::vector<int>(2);
         int x = rand() % ((width_ - border_ * 3) / step_size_) * step_size_ + border_;
         int y = rand() % ((height_ - border_ * 3) / step_size_) * step_size_ + border_;
         vertices_[i][0] = x;
         vertices_[i][1] = y;
     }
+}
+
+void Genetic::read_vertices(const std::string& file_name)
+{
+    std::ifstream input_file_stream;
+    input_file_stream.open(file_name);
+    std::vector<int> number_seq;
+    if (input_file_stream.is_open())
+    {
+        int n;
+        while (input_file_stream >> n)
+        {
+            number_seq.push_back(n);
+        }
+    }
+    else
+    {
+        std::cout << "Find not found.\n";
+    }
+    input_file_stream.close();
+    std::cout << number_seq.size() << std::endl;
+    for (size_t i = 0; i < number_seq.size(); ++i)
+    {
+        std::cout << number_seq[i] << std::endl;
+    }
+    for (int i = 0; i < number_of_vertices_; ++i)
+    {
+        vertices_[i][0] = number_seq[i * 2];
+        vertices_[i][1] = number_seq[i * 2 + 1];
+    }
+    std::cout << "here\n";
 }
 
 std::vector<std::vector<int>> Genetic::get_vertices()
