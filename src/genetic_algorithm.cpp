@@ -29,7 +29,7 @@ private:
     int width_;
     int step_size_;
     int border_;
-    std::vector<std::vector<int>> vertices_;
+    std::vector<cv::Point> vertices_;
     std::vector<std::vector<float>> cost_matrix_;
     std::vector<Tour> population_;
 
@@ -37,7 +37,7 @@ public:
     Genetic(int number_of_vertices = 0, int population_size = 0, int hybridization_size = 0, int mutation_size = 0, int number_of_generations = 0, int height = 0, int width = 0, int step_size = 0, int border = 0);
     void generate_vertices();
     void read_vertices(const std::string& file_name);
-    std::vector<std::vector<int>> get_vertices();
+    std::vector<cv::Point> get_vertices();
     void compute_cost_matrix();
     void initialise();
     // void set_population(std::vector<std::vector<int>> population);
@@ -63,7 +63,7 @@ int main()
 
     // genetic.generate_vertices();
     genetic.read_vertices("vertices.txt");
-    std::vector<std::vector<int>> vertices;
+    std::vector<cv::Point> vertices;
     vertices = genetic.get_vertices();
 
     genetic.compute_cost_matrix();
@@ -75,15 +75,11 @@ int main()
     cv::Mat genetic_map(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
     for (int i = 0; i < number_of_vertices; ++i)
     {
-        cv::circle(genetic_map, cv::Point(vertices[i][0], vertices[i][1]),
-                   1, cv::Scalar(0, 0, 255), 2, 0);
+        cv::circle(genetic_map, vertices[i], 1, cv::Scalar(0, 0, 255), 2, 0);
     }
     for (int i = 0; i < number_of_vertices - 1; ++i)
     {
-        cv::line(genetic_map,
-                 cv::Point(vertices[genetic_tour.vertex_indexes[i]][0], vertices[genetic_tour.vertex_indexes[i]][1]),
-                 cv::Point(vertices[genetic_tour.vertex_indexes[i + 1]][0], vertices[genetic_tour.vertex_indexes[i + 1]][1]),
-                 cv::Scalar(255, 0, 0), 1, 8, 0);
+        cv::line(genetic_map, vertices[genetic_tour.vertex_indexes[i]], vertices[genetic_tour.vertex_indexes[i + 1]], cv::Scalar(255, 0, 0), 1, 8, 0);
     }
     std::string genetic_text = "GA: ";
     genetic_text.append(std::to_string(genetic_algorithm_cost));
@@ -99,7 +95,7 @@ Genetic::Genetic(int number_of_vertices, int population_size, int hybridization_
     : number_of_vertices_(number_of_vertices), population_size_(population_size), hybridization_size_(hybridization_size), mutation_size_(mutation_size), number_of_generations_(number_of_generations),
       height_(height), width_(width), step_size_(step_size), border_(border)
 {
-    vertices_ = std::vector<std::vector<int>>(number_of_vertices_, std::vector<int>(2));
+    vertices_ = std::vector<cv::Point>(number_of_vertices_);
 }
 
 void Genetic::genetic(Tour& genetic_tour, float& genetic_algorithm_cost)
@@ -153,8 +149,8 @@ void Genetic::generate_vertices()
     {
         int x = rand() % ((width_ - border_ * 3) / step_size_) * step_size_ + border_;
         int y = rand() % ((height_ - border_ * 3) / step_size_) * step_size_ + border_;
-        vertices_[i][0] = x;
-        vertices_[i][1] = y;
+        vertices_[i].x = x;
+        vertices_[i].y = y;
     }
 }
 
@@ -183,13 +179,13 @@ void Genetic::read_vertices(const std::string& file_name)
     }
     for (int i = 0; i < number_of_vertices_; ++i)
     {
-        vertices_[i][0] = number_seq[i * 2];
-        vertices_[i][1] = number_seq[i * 2 + 1];
+        vertices_[i].x = number_seq[i * 2];
+        vertices_[i].y = number_seq[i * 2 + 1];
     }
     std::cout << "here\n";
 }
 
-std::vector<std::vector<int>> Genetic::get_vertices()
+std::vector<cv::Point> Genetic::get_vertices()
 {
     return vertices_;
 }
@@ -208,8 +204,8 @@ void Genetic::compute_cost_matrix()
             }
             else
             {
-                int dx = vertices_[i][0] - vertices_[j][0];
-                int dy = vertices_[i][1] - vertices_[j][1];
+                int dx = vertices_[i].x - vertices_[j].x;
+                int dy = vertices_[i].y - vertices_[j].y;
                 cost_matrix_[i][j] = sqrt(dx * dx + dy * dy);
             }
         }
